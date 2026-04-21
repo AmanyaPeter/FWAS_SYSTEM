@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FWAS — Architectural Design & Implementation Report — Group 9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #111118;
+    --surface2:  #18181f;
+    --surface3:  #1e1e28;
+    --border:    #2a2a38;
+    --border2:   #363648;
+    --accent:    #6c8eff;
+    --accent2:   #a78bfa;
+    --accent3:   #34d399;
+    --text:      #e8e8f0;
+    --text2:     #9090a8;
+    --text3:     #5a5a72;
+    --w5:        #6c8eff;
+    --w7:        #a78bfa;
+    --code-bg:   #0d0d14;
+    --nav-w:     260px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.75;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ──────────────────────────────────────────────── */
+  nav {
+    width: var(--nav-w);
+    min-width: var(--nav-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 0 0 40px;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .nav-header {
+    padding: 28px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+
+  .nav-header .proj {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .nav-header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .nav-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-top: 8px;
+    letter-spacing: 0.08em;
+  }
+  .nav-badge.w5 { background: rgba(108,142,255,0.15); color: var(--w5); border: 1px solid rgba(108,142,255,0.3); }
+  .nav-badge.w7 { background: rgba(167,139,250,0.15); color: var(--w7); border: 1px solid rgba(167,139,250,0.3); margin-left: 4px; }
+
+  .nav-group { padding: 16px 0 4px; }
+
+  .nav-group-label {
+    font-size: 9.5px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 20px 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .nav-dot.w5 { background: var(--w5); }
+  .nav-dot.w7 { background: var(--w7); }
+
+  nav a {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 20px;
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 12.5px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1.4;
+  }
+
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--text); background: var(--surface3); }
+
+  nav a .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    min-width: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ── MAIN ─────────────────────────────────────────────── */
+  main {
+    margin-left: var(--nav-w);
+    flex: 1;
+    max-width: 900px;
+    padding: 60px 64px 100px;
+  }
+
+  /* ── COVER ────────────────────────────────────────────── */
+  .cover {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: 'FWAS';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'DM Serif Display', serif;
+    font-size: 200px;
+    color: var(--surface2);
+    user-select: none;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .cover-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cover-tag::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .cover h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 400;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .cover h1 em {
+    font-style: italic;
+    color: var(--accent2);
+  }
+
+  .cover-sub {
+    font-size: 17px;
+    color: var(--text2);
+    font-weight: 300;
+    margin-bottom: 48px;
+    max-width: 480px;
+  }
+
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 520px;
+    margin-bottom: 48px;
+  }
+
+  .cover-meta-item {
+    background: var(--surface);
+    padding: 16px 20px;
+  }
+
+  .cover-meta-item .label {
+    font-size: 9.5px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .cover-meta-item .value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    max-width: 520px;
+  }
+
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    transition: border-color 0.2s;
+  }
+
+  .team-card:hover { border-color: var(--border2); }
+
+  .team-card .name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .team-card .reg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .team-card .role {
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* ── WEEK DIVIDERS ────────────────────────────────────── */
+  .week-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 80px 0 48px;
+    padding: 24px 28px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .week-divider.w5 {
+    background: linear-gradient(135deg, rgba(108,142,255,0.08), rgba(108,142,255,0.03));
+    border: 1px solid rgba(108,142,255,0.25);
+  }
+
+  .week-divider.w7 {
+    background: linear-gradient(135deg, rgba(167,139,250,0.08), rgba(167,139,250,0.03));
+    border: 1px solid rgba(167,139,250,0.25);
+  }
+
+  .week-divider .wk-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 64px;
+    line-height: 1;
+    opacity: 0.12;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .week-divider.w5 .wk-num { color: var(--w5); }
+  .week-divider.w7 .wk-num { color: var(--w7); }
+
+  .week-divider .icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .week-divider.w5 .icon { background: rgba(108,142,255,0.15); }
+  .week-divider.w7 .icon { background: rgba(167,139,250,0.15); }
+
+  .week-divider .info .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .week-divider.w5 .info .tag { color: var(--w5); }
+  .week-divider.w7 .info .tag { color: var(--w7); }
+
+  .week-divider .info h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--text);
+  }
+
+  /* ── SECTIONS ─────────────────────────────────────────── */
+  section {
+    margin-bottom: 64px;
+    scroll-margin-top: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    padding-top: 8px;
+    flex-shrink: 0;
+    min-width: 36px;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 32px 0 12px;
+  }
+
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 24px 0 10px;
+  }
+
+  p {
+    color: var(--text2);
+    margin-bottom: 14px;
+  }
+
+  p strong { color: var(--text); font-weight: 600; }
+
+  ul {
+    list-style: none;
+    margin: 12px 0 16px;
+  }
+
+  ul li {
+    color: var(--text2);
+    padding: 5px 0 5px 22px;
+    position: relative;
+    font-size: 14.5px;
+  }
+
+  ul li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  /* ── TABLES ───────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  thead tr {
+    background: var(--surface2);
+  }
+
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+  tbody tr:nth-child(even):hover { background: var(--surface2); }
+
+  td {
+    padding: 11px 16px;
+    color: var(--text2);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  td strong { color: var(--text); font-weight: 500; }
+
+  td:first-child {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ── CODE BLOCKS ──────────────────────────────────────── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: #7dd3b8;
+    line-height: 1.7;
+    white-space: pre;
+  }
+
+  /* ── CALLOUT BOXES ────────────────────────────────────── */
+  .callout {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.65;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .callout.info {
+    background: rgba(108,142,255,0.07);
+    border: 1px solid rgba(108,142,255,0.2);
+  }
+
+  .callout.success {
+    background: rgba(52,211,153,0.07);
+    border: 1px solid rgba(52,211,153,0.2);
+  }
+
+  .callout.purple {
+    background: rgba(167,139,250,0.07);
+    border: 1px solid rgba(167,139,250,0.2);
+  }
+
+  .callout .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout .body { color: var(--text2); }
+  .callout .body strong { color: var(--text); }
+
+  /* ── LABEL-VALUE PAIRS ────────────────────────────────── */
+  .kv {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 14px 0;
+    font-size: 13.5px;
+  }
+
+  .kv .k {
+    background: var(--surface2);
+    padding: 10px 14px;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 12.5px;
+  }
+
+  .kv .v {
+    background: var(--surface);
+    padding: 10px 14px;
+    color: var(--text2);
+  }
+
+  /* ── CHECKLIST ────────────────────────────────────────── */
+  .checklist {
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 13.5px;
+  }
+
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li::before { display: none; }
+
+  .check-icon {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(52,211,153,0.15);
+    border: 1px solid rgba(52,211,153,0.4);
+    color: var(--accent3);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── PATTERN DIAGRAM ──────────────────────────────────── */
+  .arch-diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .arch-layer {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .arch-layer:last-child { border-bottom: none; }
+  .arch-layer:hover { background: var(--surface2); }
+
+  .arch-layer .layer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .arch-layer.pres .layer-label { color: var(--accent); }
+  .arch-layer.app .layer-label  { color: var(--accent2); }
+  .arch-layer.data .layer-label { color: var(--accent3); }
+
+  .arch-layer .layer-content {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .arch-layer .layer-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+  }
+
+  .chip.pres { border-color: rgba(108,142,255,0.3); color: var(--w5); background: rgba(108,142,255,0.06); }
+  .chip.app  { border-color: rgba(167,139,250,0.3); color: var(--w7); background: rgba(167,139,250,0.06); }
+  .chip.data { border-color: rgba(52,211,153,0.3);  color: var(--accent3); background: rgba(52,211,153,0.06); }
+
+  .layer-arrow {
+    text-align: center;
+    padding: 8px;
+    color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--code-bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── FOOTER ───────────────────────────────────────────── */
+  footer {
+    margin-top: 100px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text3);
+  }
+
+  /* ── SCROLL INDICATOR ─────────────────────────────────── */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: var(--nav-w); right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform-origin: left;
+    z-index: 200;
+    transition: transform 0.1s linear;
+  }
+
+  /* ── PRINT ────────────────────────────────────────────── */
+  @media print {
+    nav, .progress-bar { display: none; }
+    main { margin-left: 0; padding: 20px; }
+    .cover::before { display: none; }
+    .week-divider { break-before: page; }
+    section { break-inside: avoid; }
+  }
+
+  @media (max-width: 900px) {
+    nav { transform: translateX(-100%); }
+    main { margin-left: 0; padding: 32px 24px; }
+    .cover::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-header">
+    <div class="proj">Group 9 · MUST · 2026</div>
+    <h1>FWAS Report</h1>
+    <span class="nav-badge w5">Week 5</span>
+    <span class="nav-badge w7">Week 7</span>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label"><span class="nav-dot w5"></span>Week 5 — Architecture</div>
+    <a href="#cover"><span class="num">00</span>Cover & Team</a>
+    <a href="#s1"><span class="num">01</span>Learning Objectives</a>
+    <a href="#s2"><span class="num">02</span>Concept Building</a>
+    <a href="#s3"><span class="num">03</span>Design Decisions</a>
+    <a href="#s4"><span class="num">04</span>4+1 Views</a>
+    <a href="#s5"><span class="num">05</span>Arch. Patterns</a>
+    <a href="#s6"><span class="num">06</span>App Architecture</a>
+    <a href="#s7"><span class="num">07</span>Full Architecture</a>
+    <a href="#s8"><span class="num">08</span>Reflection (W5)</a>
+    <a href="#bonus"><span class="num">★</span>Bonus Comparison</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label"><span class="nav-dot w7"></span>Week 7 — Implementation</div>
+    <a href="#sK"><span class="num">K</span>Design Patterns</a>
+    <a href="#sL"><span class="num">L</span>Implementation Plan</a>
+    <a href="#sM"><span class="num">M</span>Software Reuse</a>
+    <a href="#sN"><span class="num">N</span>Config Management</a>
+    <a href="#sO"><span class="num">O</span>Deployment</a>
+    <a href="#sP"><span class="num">P</span>Open Source</a>
+    <a href="#checklist"><span class="num">✔</span>Final Checklist</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- COVER -->
+  <div class="cover" id="cover">
+    <div class="cover-tag">Software Engineering · Mbarara University of Science &amp; Technology</div>
+    <h1>Finance Workflow<br><em>Assistance System</em></h1>
+    <p class="cover-sub">Architectural Design &amp; Implementation Planning Report — Weeks 5 &amp; 7 Combined</p>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">Group</div>
+        <div class="value">Group 9</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Course</div>
+        <div class="value">Software Engineering</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Date</div>
+        <div class="value">April 2026</div>
+      </div>
+    </div>
+
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="name">Nuwagira Timothy</div>
+        <div class="reg">2024/BCS/140/PS</div>
+        <div class="role">System Analyst</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Akot Bridget</div>
+        <div class="reg">2024/BCS/031/PS</div>
+        <div class="role">Process Modeling Lead</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Amanya Peter</div>
+        <div class="reg">2024/BCS/033/PS</div>
+        <div class="role">Data Modeling Lead</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Musasire T. Kenneth</div>
+        <div class="reg">2024/BCS/115/PS</div>
+        <div class="role">Interface Design Lead</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Ayikoru Jackline</div>
+        <div class="reg">2024/BCS/002</div>
+        <div class="role">Documentation Lead</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Doreen Miracle</div>
+        <div class="reg">2024/BCS/130/PS</div>
+        <div class="role">Process Modeling Lead</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WEEK 5 DIVIDER ══ -->
+  <div class="week-divider w5">
+    <div class="icon">🏗</div>
+    <div class="info">
+      <div class="tag">Week 5 Workbook</div>
+      <h2>Architectural Design Report</h2>
+    </div>
+    <div class="wk-num">5</div>
+  </div>
+
+  <!-- S1 -->
+  <section id="s1">
+    <div class="section-header">
+      <span class="section-num">§ 01</span>
+      <h2 class="section-title">Learning Objectives</h2>
+    </div>
+    <p>By completing this workbook, our group is able to:</p>
+    <ul>
+      <li>Explain software architecture and its role in system development</li>
+      <li>Identify and justify architectural design decisions made for FWAS</li>
+      <li>Draw and interpret architectural views using the 4+1 model</li>
+      <li>Apply architectural patterns — specifically Layered Architecture with MVC — to FWAS</li>
+      <li>Select and justify application architecture types appropriate to the FWAS context</li>
+      <li>Produce a complete architectural design document for the FWAS group project</li>
+    </ul>
+  </section>
+
+  <!-- S2 -->
+  <section id="s2">
+    <div class="section-header">
+      <span class="section-num">§ 02</span>
+      <h2 class="section-title">Concept Building</h2>
+    </div>
+
+    <h3>Activity 2.1 — Understanding Architecture</h3>
+
+    <h4>Software Architecture</h4>
+    <p>Software architecture is the high-level structure of a software system — the set of principal design decisions that define how the system is decomposed into components, how those components interact, and what properties the overall system must satisfy. For FWAS, the architecture defines how the web interface, the business logic layer, and the SQLite database are organized and how data flows between them.</p>
+
+    <h4>Architectural Design</h4>
+    <p>Architectural design is the process of making and documenting those high-level structural decisions before detailed coding begins. It translates requirements into a blueprint that development teams can implement consistently. For FWAS, this meant deciding on a layered architecture, selecting PHP as the backend language, and defining how each layer communicates.</p>
+
+    <h4>Why Architecture Bridges Requirements and Design</h4>
+    <p>Requirements describe what the system must do. Architecture answers <em>how</em> those requirements will be realized structurally. It is the bridge because it forces abstract needs to become concrete structural choices: a requirement for offline operation became the decision to use a local Apache/PHP/SQLite stack; a requirement for role-based access became a dedicated authentication layer.</p>
+
+    <h3>Activity 2.2 — Architecture in Practice</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Description &amp; Interactions</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Presentation Layer</strong></td><td>HTML/CSS/JS views rendered by PHP. Sends user input to the Application Layer; receives and displays responses.</td></tr>
+          <tr><td><strong>Authentication Module</strong></td><td>Validates credentials, enforces role-based access (Officer / Supervisor / Admin). All other components depend on session state it provides.</td></tr>
+          <tr><td><strong>Business Logic Layer</strong></td><td>PHP controllers for Supplier, Payment, Batch, Document, and Export processes. Enforces rules (status transitions, duplicate invoice checks, TIN validation).</td></tr>
+          <tr><td><strong>Data Layer</strong></td><td>SQLite database accessed via PHP PDO. Holds Supplier, Payment, Batch, Document, User, and BatchAuditLog tables.</td></tr>
+          <tr><td><strong>Export Engine</strong></td><td>Reads finalized batch data from the Data Layer and generates CSV/Excel summaries for manual IFMS entry. No external API calls.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S3 -->
+  <section id="s3">
+    <div class="section-header">
+      <span class="section-num">§ 03</span>
+      <h2 class="section-title">Architectural Design Decisions</h2>
+    </div>
+
+    <h3>Activity 3.1 — Key Decisions</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Decision Area</th><th>Our Choice</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td><strong>System Type</strong></td><td>Transaction Processing System</td><td>Core function is recording, validating, and batching payment transactions for IFMS preparation.</td></tr>
+          <tr><td><strong>Architecture Style</strong></td><td>Layered (3-tier) + MVC</td><td>Separates presentation, business logic, and data concerns. Supports maintainability and role-based access enforcement at each layer.</td></tr>
+          <tr><td><strong>Deployment</strong></td><td>Local Apache/PHP on-premises</td><td>MUST finance office has unreliable internet. System must operate fully offline. Cloud deployment is not viable.</td></tr>
+          <tr><td><strong>Data Storage</strong></td><td>SQLite (file-based)</td><td>No separate DB server needed. Sufficient for single-institution load. Portable and easy to back up.</td></tr>
+          <tr><td><strong>Security</strong></td><td>Session auth + RBAC + bcrypt</td><td>Restricts functionality by role. bcrypt prevents plaintext credential storage. No external identity provider dependency.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity 3.2 — Non-Functional Requirements Mapping</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Quality</th><th>How Our Architecture Supports It</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Performance</strong></td><td>SQLite handles concurrent reads efficiently for a single-office user base. No network latency since hosted locally.</td></tr>
+          <tr><td><strong>Security</strong></td><td>Authentication module sits at the entry point of all routes. Passwords stored as bcrypt hashes in the Data Layer.</td></tr>
+          <tr><td><strong>Availability</strong></td><td>Runs on local Apache server — available whenever the machine is on, independent of internet connectivity.</td></tr>
+          <tr><td><strong>Maintainability</strong></td><td>Layered separation means changes to UI do not require changes to business logic or database schema.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S4 -->
+  <section id="s4">
+    <div class="section-header">
+      <span class="section-num">§ 04</span>
+      <h2 class="section-title">Architectural Views — 4+1 Model</h2>
+    </div>
+
+    <h3>View Definitions</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>View</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Logical View</strong></td><td>Describes the system's functional decomposition — major modules and their responsibilities.</td></tr>
+          <tr><td><strong>Process View</strong></td><td>Describes runtime behavior — how the system responds to requests, how processes interact.</td></tr>
+          <tr><td><strong>Development View</strong></td><td>Describes static code structure — how the codebase is organized into packages, modules, and files.</td></tr>
+          <tr><td><strong>Physical View</strong></td><td>Describes deployment — how software components map onto hardware infrastructure.</td></tr>
+          <tr><td><strong>+1 Use Cases</strong></td><td>Ties the other four views together by describing the key scenarios that drive the architecture.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1. Logical View — System Modules</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Module</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Auth Module</strong></td><td>Login, logout, session management, role enforcement</td></tr>
+          <tr><td><strong>Supplier Module</strong></td><td>Register, search, edit supplier records including TIN and bank details</td></tr>
+          <tr><td><strong>Payment Module</strong></td><td>Create, edit, delete payment entries; enforce status lifecycle (Draft → Ready → Batched → Processed)</td></tr>
+          <tr><td><strong>Batch Module</strong></td><td>Create and manage batches; add/remove payments; enforce Open/Finalized states; write to audit log</td></tr>
+          <tr><td><strong>Document Module</strong></td><td>Attach and retrieve supporting files (invoices, receipts) linked to payments</td></tr>
+          <tr><td><strong>Export Module</strong></td><td>Generate CSV/Excel batch summaries for manual IFMS entry</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block"><pre>[Auth Module]     ──controls access to──▶  [All other modules]
+[Supplier Module] ──provides TIN/bank──▶   [Payment Module]
+[Payment Module]  ──supplies records──▶    [Batch Module]
+[Batch Module]    ──triggers──▶            [Export Module]
+[Payment Module]  ──links docs via──▶      [Document Module]
+[Batch Module]    ──writes events to──▶    [BatchAuditLog]</pre></div>
+
+    <h3>2. Process View — Runtime Interaction</h3>
+    <div class="code-block"><pre>Finance Officer (Browser)
+        │
+        │ HTTP request
+        ▼
+Apache Web Server (localhost)
+        │
+        │ routes to PHP script
+        ▼
+PHP Application Layer
+   ├── Auth Controller      ── validates session/role
+   ├── Payment Controller   ── enforces business rules
+   │         │
+   │         │ PDO query
+   │         ▼
+   └──── SQLite Database    ── reads/writes data
+        │
+        │ HTML response
+        ▼
+Finance Officer (Browser) ── displays result</pre></div>
+
+    <h3>3. Development View — Code Structure</h3>
+    <div class="code-block"><pre>fwas/
+├── index.php                  (entry point / router)
+├── config/
+│   └── database.php           (SQLite connection setup)
+├── controllers/
+│   ├── AuthController.php
+│   ├── SupplierController.php
+│   ├── PaymentController.php
+│   ├── BatchController.php
+│   ├── DocumentController.php
+│   └── ExportController.php
+├── models/
+│   ├── Supplier.php
+│   ├── Payment.php
+│   ├── Batch.php
+│   ├── Document.php
+│   └── User.php
+├── views/
+│   ├── login.php
+│   ├── dashboard.php
+│   ├── suppliers/
+│   ├── payments/
+│   └── batches/
+├── exports/                   (generated CSV/Excel files)
+└── database/
+    └── fwas.db                (SQLite file)</pre></div>
+
+    <h3>4. Physical View — Deployment</h3>
+    <div class="code-block"><pre>MUST Finance Office
+┌─────────────────────────────────────────────┐
+│  Finance Officer PC / Shared Workstation    │
+│                                             │
+│  ┌──────────────┐   ┌──────────────────┐    │
+│  │ Web Browser  │──▶│ Apache HTTP      │    │
+│  │ (Chrome/FF)  │   │ Server (local)   │    │
+│  └──────────────┘   │ PHP Runtime      │    │
+│                     └────────┬─────────┘    │
+│                              │               │
+│                     ┌────────▼─────────┐    │
+│                     │   SQLite DB      │    │
+│                     │   (fwas.db)      │    │
+│                     └──────────────────┘    │
+└─────────────────────────────────────────────┘
+No internet required.
+IFMS: manual entry on a separate government terminal.</pre></div>
+
+    <h3>+1 Use Cases — Architectural Drivers</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Use Case</th><th>Architectural Impact</th></tr></thead>
+        <tbody>
+          <tr><td><strong>UC-04 Record Payment</strong></td><td>Drove the Supplier-Payment FK relationship; TIN auto-fill eliminates repetitive manual entry.</td></tr>
+          <tr><td><strong>UC-09 Create Batch</strong></td><td>Introduced the Batch entity and Open/Finalized state machine; drove the BatchAuditLog.</td></tr>
+          <tr><td><strong>UC-13 Export Batch</strong></td><td>Determined the Export Module as standalone; defined CSV/Excel as output formats independent of IFMS.</td></tr>
+          <tr><td><strong>UC-17 Login</strong></td><td>Established session-based auth as gateway to all functionality; role enum shaped access control.</td></tr>
+          <tr><td><strong>UC-22 Backup DB</strong></td><td>Confirmed SQLite file-based storage — backup is a simple file copy available to the Admin.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S5 -->
+  <section id="s5">
+    <div class="section-header">
+      <span class="section-num">§ 05</span>
+      <h2 class="section-title">Architectural Patterns</h2>
+    </div>
+
+    <h3>Activity 5.1 — Pattern Matching</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>System Type</th><th>Suggested Pattern</th></tr></thead>
+        <tbody>
+          <tr><td>Web Application</td><td>MVC (Model-View-Controller)</td></tr>
+          <tr><td>Banking System</td><td>Layered Architecture</td></tr>
+          <tr><td>Compiler</td><td>Pipe-and-Filter</td></tr>
+          <tr><td>Data Processing System</td><td>Batch Sequential / Repository</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity 5.2 — Pattern Applied to FWAS</h3>
+    <div class="callout info">
+      <div class="icon">🏛</div>
+      <div class="body"><strong>Chosen Pattern:</strong> 3-Tier Layered Architecture with MVC in the Application Layer</div>
+    </div>
+
+    <div class="arch-diagram">
+      <div class="arch-layer pres">
+        <div class="layer-label">Presentation Layer</div>
+        <div class="layer-content">PHP-rendered HTML views. Receives input from the Finance Officer's browser.</div>
+        <div class="layer-items">
+          <span class="chip pres">login.php</span>
+          <span class="chip pres">dashboard.php</span>
+          <span class="chip pres">payment form</span>
+          <span class="chip pres">batch detail</span>
+          <span class="chip pres">supplier list</span>
+        </div>
+      </div>
+      <div class="layer-arrow">↕ HTTP (localhost)</div>
+      <div class="arch-layer app">
+        <div class="layer-label">Application Layer — MVC Controllers</div>
+        <div class="layer-content">Enforces all business rules, status transitions, and validation logic.</div>
+        <div class="layer-items">
+          <span class="chip app">AuthController</span>
+          <span class="chip app">SupplierController</span>
+          <span class="chip app">PaymentController</span>
+          <span class="chip app">BatchController</span>
+          <span class="chip app">DocumentController</span>
+          <span class="chip app">ExportController</span>
+        </div>
+      </div>
+      <div class="layer-arrow">↕ PHP PDO</div>
+      <div class="arch-layer data">
+        <div class="layer-label">Data Layer</div>
+        <div class="layer-content">SQLite database (fwas.db). Only the Application Layer writes to it.</div>
+        <div class="layer-items">
+          <span class="chip data">Supplier</span>
+          <span class="chip data">Payment</span>
+          <span class="chip data">Batch</span>
+          <span class="chip data">Document</span>
+          <span class="chip data">User</span>
+          <span class="chip data">BatchAuditLog</span>
+        </div>
+      </div>
+    </div>
+
+    <h4>Justification</h4>
+    <p>A layered architecture was chosen because FWAS has a clear separation between what the user sees, what the system enforces, and what is stored. This separation was not arbitrary — it emerged from the Week 3 modeling work. When the group discovered the BatchAuditLog requirement during the ER diagram exercise, it was because the data layer had a concern entirely separate from the presentation layer. Layering made that separation explicit and enforceable.</p>
+  </section>
+
+  <!-- S6 -->
+  <section id="s6">
+    <div class="section-header">
+      <span class="section-num">§ 06</span>
+      <h2 class="section-title">Application Architectures</h2>
+    </div>
+
+    <div class="callout success">
+      <div class="icon">⚡</div>
+      <div class="body"><strong>System Type Selected:</strong> Transaction Processing System (TPS)</div>
+    </div>
+
+    <p>FWAS is a TPS. Its primary function is to capture, validate, and record discrete financial transactions and produce outputs that feed into an external system (IFMS). Every key interaction — recording a payment, adding it to a batch, finalizing and exporting — is a transaction with defined pre-conditions, validation rules, and state changes. The payment status lifecycle (Draft → Ready → Batched → Processed) is characteristic of TPS design.</p>
+
+    <h3>Real-World Analysis — FWAS at MUST</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Organisation</strong></td><td>Mbarara University of Science and Technology — Finance Department</td></tr>
+          <tr><td><strong>System Type</strong></td><td>Transaction Processing System (payment preparation and batching)</td></tr>
+          <tr><td><strong>Architecture Applied</strong></td><td>3-tier Layered Architecture with MVC; local deployment on Apache/PHP/SQLite</td></tr>
+          <tr><td><strong>Challenges Observed</strong></td><td>Finance officers must re-enter supplier TIN numbers for every new IFMS transaction. No bulk upload at officer level. Session timeouts cause complete re-entry. FWAS addresses this by storing TIN once and auto-filling on payment creation.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S7 -->
+  <section id="s7">
+    <div class="section-header">
+      <span class="section-num">§ 07</span>
+      <h2 class="section-title">Full Architectural Design</h2>
+    </div>
+
+    <h3>7.1 System Overview</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td><strong>System Name</strong></td><td>Finance Workflow Assistance System (FWAS)</td></tr>
+          <tr><td><strong>Purpose</strong></td><td>A local web application that assists finance officers at MUST in preparing supplier payment data before manual entry into IFMS — reducing repetitive TIN entry, preventing duplicate invoices, and producing structured export summaries.</td></tr>
+          <tr><td><strong>Primary Users</strong></td><td>Finance Officer (primary), Finance Supervisor (review), System Administrator (maintenance)</td></tr>
+          <tr><td><strong>Deployment</strong></td><td>Runs entirely on a local workstation. No internet required. IFMS remains a separate external system with no programmatic link.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.2 Component Description</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AuthController</strong></td><td>Validates login credentials against bcrypt-hashed passwords. Initializes session with user ID and role. All other controllers check session first.</td></tr>
+          <tr><td><strong>SupplierController</strong></td><td>CRUD for supplier records. Validates TIN (exactly 10 numeric digits). Provides TIN auto-fill to PaymentController on supplier selection.</td></tr>
+          <tr><td><strong>PaymentController</strong></td><td>Creates and manages payment records. Enforces status lifecycle. Validates for duplicate invoice numbers per supplier.</td></tr>
+          <tr><td><strong>BatchController</strong></td><td>Creates and manages batches. Enforces that only Ready payments are added. Transitions Open → Finalized. Writes every add/remove to BatchAuditLog.</td></tr>
+          <tr><td><strong>DocumentController</strong></td><td>Handles file upload, storage, and retrieval for payment-attached documents.</td></tr>
+          <tr><td><strong>ExportController</strong></td><td>Reads finalized batch data joined with supplier and payment records. Produces CSV or Excel file for manual IFMS entry.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.3 Technology Stack</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Frontend</strong></td><td>HTML5, CSS3, vanilla JavaScript — rendered server-side by PHP. No framework dependency.</td></tr>
+          <tr><td><strong>Backend</strong></td><td>PHP 8.1 on Apache HTTP Server (XAMPP). Plain MVC — no framework — for offline reliability.</td></tr>
+          <tr><td><strong>Database</strong></td><td>SQLite 3 via PHP PDO. Schema: Supplier, Payment, Batch, Document, User, BatchAuditLog.</td></tr>
+          <tr><td><strong>Export</strong></td><td>PHP native CSV + PhpSpreadsheet library for .xlsx output.</td></tr>
+          <tr><td><strong>Security</strong></td><td>bcrypt via password_hash(). Session-based auth. Role-based access in every controller.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.4 Non-Functional Requirements</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Quality</th><th>How FWAS Ensures It</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Security</strong></td><td>Passwords as bcrypt hashes — never plaintext. Session gates all routes. BatchAuditLog is append-only with no exposed delete method.</td></tr>
+          <tr><td><strong>Performance</strong></td><td>All processing is local — no network round trips. SQLite performs well for single-office sequential load. TIN auto-fill removes repeated lookup overhead.</td></tr>
+          <tr><td><strong>Scalability</strong></td><td>Intentionally scoped to single institution. Future migration from SQLite to PostgreSQL/MySQL requires only PDO config changes — the layered architecture isolates this.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- S8 -->
+  <section id="s8">
+    <div class="section-header">
+      <span class="section-num">§ 08</span>
+      <h2 class="section-title">Group Reflection — Week 5</h2>
+    </div>
+
+    <h4>1. Most Challenging Concept</h4>
+    <p>The most challenging concept was correctly applying the 4+1 architectural views without conflating them. Initially the group confused the Process View (runtime behavior) with the Development View (code structure). The distinction became clear when we asked: "Is this describing what the code looks like on disk, or what happens when it runs?" The physical view was also non-trivial — we had to be precise that deployment is genuinely local with no cloud component, which is architecturally significant given the offline requirement.</p>
+
+    <h4>2. Architectural Decision the Group Struggled With</h4>
+    <p>The group debated whether to use Laravel versus plain PHP MVC. Laravel would have provided scaffolding, routing, and ORM features, but it introduces Composer dependency management and requires internet access during setup — incompatible with the offline deployment requirement. We resolved this by choosing plain PHP MVC, accepting more manual code in exchange for a stack that installs and runs entirely offline from a USB drive if necessary.</p>
+
+    <h4>3. How We Would Improve the Design</h4>
+    <p>Three v2 improvements would be prioritized: (1) a formal Supervisor approval workflow — requires adding an Approval state to the Batch enum and an ApprovalController; (2) direct IFMS API integration to eliminate the manual retype step, subject to government infrastructure availability; (3) automated database backup scheduling via a PHP cron job writing timestamped SQLite copies to a backup folder.</p>
+  </section>
+
+  <!-- BONUS -->
+  <section id="bonus">
+    <div class="section-header">
+      <span class="section-num">★</span>
+      <h2 class="section-title">Bonus: Architecture Comparison</h2>
+    </div>
+
+    <h3>Layered vs Client-Server</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Layered Architecture</th><th>Client-Server</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Advantages</strong></td><td>Clear separation of concerns; each layer independently maintainable; changes to one layer minimally affect others</td><td>Natural for networked systems; server centralizes data and logic; clients can be thin and replaceable</td></tr>
+          <tr><td><strong>Disadvantages</strong></td><td>Can introduce overhead if too many layers; lower layers cannot access higher ones</td><td>Requires network infrastructure; server is single point of failure; latency sensitive</td></tr>
+          <tr><td><strong>Best Use Case</strong></td><td>Business applications with clear logic separation (ERP, financial systems, TPS)</td><td>Distributed systems needing centralized access (email, web services, banking backends)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>MVC vs Repository Pattern</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>MVC</th><th>Repository Pattern</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Advantages</strong></td><td>Widely understood; clear UI/logic/data split; good for CRUD-heavy web apps</td><td>Abstracts data source completely; easy to swap databases without touching business logic</td></tr>
+          <tr><td><strong>Disadvantages</strong></td><td>Model can become bloated if handling both business rules and data access</td><td>Overkill for simple systems; adds abstraction overhead if data source will never change</td></tr>
+          <tr><td><strong>Best Use Case</strong></td><td>Form-driven transaction systems like FWAS</td><td>Enterprise apps where the data source may change (SQL → NoSQL migration)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ WEEK 7 DIVIDER ══ -->
+  <div class="week-divider w7">
+    <div class="icon">⚙️</div>
+    <div class="info">
+      <div class="tag">Week 7 Workbook</div>
+      <h2>Design Patterns &amp; Implementation Planning</h2>
+    </div>
+    <div class="wk-num">7</div>
+  </div>
+
+  <!-- SK -->
+  <section id="sK">
+    <div class="section-header">
+      <span class="section-num">§ K</span>
+      <h2 class="section-title">Design Patterns in Practice</h2>
+    </div>
+
+    <h3>Activity K1 — The Design Problem</h3>
+    <p>A significant coupling problem emerged in how different parts of FWAS respond when a Payment record changes status. Three things must happen whenever a payment moves from Draft to Ready:</p>
+    <ul>
+      <li>The Batch Module must check eligibility — only Ready payments can be added to a batch</li>
+      <li>The Export Module must exclude non-Ready payments from batch summaries</li>
+      <li>The Audit Log must record any status transition involving a batch assignment</li>
+    </ul>
+    <p>Initially, PaymentController directly called BatchController and AuditLog inline. This tight coupling meant any change to batching or logging required editing PaymentController — violating the single responsibility principle.</p>
+
+    <h3>Activity K2 — Pattern Applied</h3>
+    <div class="callout purple">
+      <div class="icon">👁</div>
+      <div class="body"><strong>Pattern Selected:</strong> Observer Pattern (Publish-Subscribe variant)</div>
+    </div>
+
+    <p>In FWAS, the Payment entity acts as the Subject. BatchController, AuditLogger, and ExportEngine register themselves as Observers of payment status changes. When PaymentController fires a status-change event, each Observer responds independently:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Observer</th><th>Response to Payment Status Change</th></tr></thead>
+        <tbody>
+          <tr><td><strong>BatchController</strong></td><td>Re-evaluates whether the payment is eligible for batch inclusion (status must be Ready)</td></tr>
+          <tr><td><strong>AuditLogger</strong></td><td>Writes an immutable record to BatchAuditLog if the change involved a batch assignment or removal</td></tr>
+          <tr><td><strong>ExportEngine</strong></td><td>Marks cached batch summaries as stale so the next export reflects updated payment state</td></tr>
+          <tr><td><strong>SupplierSearchCache</strong></td><td>On new supplier registration, refreshes the search index so the payment form dropdown is immediately accurate</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block"><pre>PaymentController (Subject)
+   │
+   │ notifyObservers(event: STATUS_CHANGED, paymentId, newStatus)
+   │
+   ├──▶ BatchController.onPaymentStatusChanged(paymentId, newStatus)
+   ├──▶ AuditLogger.onPaymentStatusChanged(paymentId, newStatus)
+   └──▶ ExportEngine.onPaymentStatusChanged(paymentId, newStatus)
+
+SupplierController (Subject)
+   │
+   │ notifyObservers(event: SUPPLIER_REGISTERED, supplierId)
+   │
+   └──▶ SupplierSearchCache.onSupplierRegistered(supplierId)</pre></div>
+
+    <h4>Benefits for FWAS</h4>
+    <ul>
+      <li>PaymentController no longer imports or calls BatchController directly — coupling is broken</li>
+      <li>New observers (e.g., email notification to Supervisor) can be added without touching existing code</li>
+      <li>The AuditLog guarantee is enforced by the pattern, not by remembering to call a log function</li>
+      <li>Aligns with FWAS's audit compliance requirement — status changes cannot silently bypass the logger</li>
+    </ul>
+  </section>
+
+  <!-- SL -->
+  <section id="sL">
+    <div class="section-header">
+      <span class="section-num">§ L</span>
+      <h2 class="section-title">Implementation Planning</h2>
+    </div>
+
+    <h3>Activity L1 — Build vs Buy</h3>
+    <div class="callout info">
+      <div class="icon">🔨</div>
+      <div class="body"><strong>Decision:</strong> Build the core system; reuse open-source libraries for specific functions</div>
+    </div>
+    <p>No off-the-shelf product exists that solves the specific problem: preparing and batching supplier payment data for manual IFMS entry in an offline, single-institution environment. Commercial ERP systems require internet connectivity and are far beyond MUST's infrastructure scope. The build decision is also necessary because FWAS must integrate with MUST's specific workflow — IFMS export format, TIN validation rules, and the approval chain are all institution-specific.</p>
+
+    <h3>Activity L2 — Tools &amp; Technologies</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layer / Category</th><th>Technology &amp; Reason</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Programming Language</strong></td><td>PHP 8.1 — server-side scripting, form-driven web apps, runs natively on Apache, no compilation step</td></tr>
+          <tr><td><strong>Frontend</strong></td><td>HTML5, CSS3, vanilla JavaScript — no build step, fully offline-compatible</td></tr>
+          <tr><td><strong>Web Server</strong></td><td>Apache via XAMPP — bundles Apache + PHP + SQLite in a single installer, non-technical admin can set up</td></tr>
+          <tr><td><strong>Database</strong></td><td>SQLite 3 via PHP PDO — no separate DB server process, entire database is a single file, trivial backups</td></tr>
+          <tr><td><strong>IDE</strong></td><td>VS Code + PHP Intelephense — free, lightweight, works offline, cross-platform</td></tr>
+          <tr><td><strong>Version Control</strong></td><td>Git + GitHub private repository — parallel development with branch-based workflow</td></tr>
+          <tr><td><strong>Export Library</strong></td><td>PhpSpreadsheet (MIT licence) — generates .xlsx from PHP arrays</td></tr>
+          <tr><td><strong>Password Security</strong></td><td>PHP built-in password_hash() / bcrypt — no external library needed</td></tr>
+          <tr><td><strong>Testing</strong></td><td>Manual functional testing + PHPUnit for critical model methods (TIN validation, duplicate invoice check)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity L3 — Task Allocation</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Team Member</th><th>Role</th><th>Implementation Task</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nuwagira Timothy</strong></td><td>System Analyst / Lead</td><td>System integration, routing (index.php), AuthController, session management, final deployment on Apache/XAMPP</td></tr>
+          <tr><td><strong>Amanya Peter</strong></td><td>Data Modeling Lead</td><td>Database schema (SQLite), all Model classes (Supplier, Payment, Batch, User, BatchAuditLog), PDO query layer</td></tr>
+          <tr><td><strong>Akot Bridget</strong></td><td>Process Modeling Lead</td><td>PaymentController and BatchController — status lifecycle, duplicate invoice validation, Observer event firing</td></tr>
+          <tr><td><strong>Musasire T. Kenneth</strong></td><td>Interface Design Lead</td><td>All PHP view templates: login, dashboard, supplier list, payment form, batch detail, export preview. CSS styling.</td></tr>
+          <tr><td><strong>Ayikoru Jackline</strong></td><td>Documentation Lead</td><td>SupplierController, DocumentController (file upload), user manual, inline code comments for all modules</td></tr>
+          <tr><td><strong>Doreen Miracle</strong></td><td>Process Modeling Lead</td><td>ExportController (CSV + Excel via PhpSpreadsheet), AdminController (user mgmt, backup), PHPUnit tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SM -->
+  <section id="sM">
+    <div class="section-header">
+      <span class="section-num">§ M</span>
+      <h2 class="section-title">Software Reuse</h2>
+    </div>
+
+    <h3>Activity M1 — Reusable Components</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Licence</th><th>Used For</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PhpSpreadsheet</strong></td><td>MIT</td><td>Generating .xlsx batch summary files in ExportController. Eliminates ~500 lines of manual Excel XML generation.</td></tr>
+          <tr><td><strong>PHP PDO (SQLite driver)</strong></td><td>Built into PHP 8.1</td><td>All database interactions. Prepared statements prevent SQL injection with no separate ORM.</td></tr>
+          <tr><td><strong>PHP password_hash() / bcrypt</strong></td><td>PHP core</td><td>Secure password storage for User accounts. No custom security module needed.</td></tr>
+          <tr><td><strong>XAMPP Stack</strong></td><td>Apache / PHP licences</td><td>Local dev and deployment environment. One-installer setup that a non-technical admin can run.</td></tr>
+          <tr><td><strong>Bootstrap 5 (CSS only)</strong></td><td>MIT</td><td>Responsive grid and base UI components. Served from local copy — no CDN dependency.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity M2 — Evaluate Reuse</h3>
+    <h4>Benefits</h4>
+    <ul>
+      <li>PhpSpreadsheet saves significant dev time — Excel file generation involves complex binary formats</li>
+      <li>PHP PDO prepared statements provide SQL injection protection automatically</li>
+      <li>XAMPP gives a single installer that sets up the entire runtime, removing manual Apache/PHP configuration</li>
+      <li>Bootstrap ensures the interface works on different screen sizes without custom responsive CSS</li>
+      <li>Well-maintained libraries provide security patches when vulnerabilities are discovered</li>
+    </ul>
+    <h4>Challenges</h4>
+    <ul>
+      <li>PhpSpreadsheet requires Composer — must be available on deployment machine or bundled manually</li>
+      <li>Bootstrap must be kept as a local file copy to satisfy the offline requirement; a CDN link would fail</li>
+      <li>Version compatibility — PhpSpreadsheet 2.x requires PHP 8.1+; older PHP versions will not work</li>
+      <li>MIT licence attribution must be included for all reused components</li>
+    </ul>
+  </section>
+
+  <!-- SN -->
+  <section id="sN">
+    <div class="section-header">
+      <span class="section-num">§ N</span>
+      <h2 class="section-title">Configuration Management</h2>
+    </div>
+
+    <div class="callout info">
+      <div class="icon">🔀</div>
+      <div class="body"><strong>Tool Selected:</strong> Git with GitHub private repository</div>
+    </div>
+
+    <h3>Branching Model</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Branch</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><strong>main</strong></td><td>Stable, working code only. Nothing merged here unless it passes manual testing. This is what gets deployed at MUST.</td></tr>
+          <tr><td><strong>develop</strong></td><td>Integration branch. All feature branches merge here first. Reviewed by System Analyst before merging to main.</td></tr>
+          <tr><td><strong>feature/[name]</strong></td><td>Each team member works on a named branch (e.g., feature/payment-controller). Keeps work isolated until ready.</td></tr>
+          <tr><td><strong>hotfix/[name]</strong></td><td>Urgent bug fixes discovered after deployment. Branched from main and merged back to both main and develop.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Commit Convention</h3>
+    <div class="code-block"><pre>feat:     add TIN validation to SupplierController
+fix:      prevent duplicate invoice on same supplier
+refactor: extract audit log write to separate method
+docs:     update README with deployment steps
+test:     add PHPUnit test for payment status transition</pre></div>
+
+    <h3>Release Versioning</h3>
+    <p>FWAS uses Semantic Versioning (MAJOR.MINOR.PATCH):</p>
+    <ul>
+      <li><strong>v1.0.0</strong> — initial working release with all 22 use cases implemented</li>
+      <li><strong>v1.1.0</strong> — minor additions (e.g., Supervisor approval workflow UC-16)</li>
+      <li><strong>v1.0.1</strong> — bug fix releases</li>
+    </ul>
+
+    <h3>Database Change Management</h3>
+    <p>Any change to the SQLite schema must be accompanied by a numbered SQL migration file stored in <code>/database/migrations/</code>. Example: <code>001_add_payment_purpose_column.sql</code>. This ensures all team members and the deployed instance stay on the same schema version.</p>
+  </section>
+
+  <!-- SO -->
+  <section id="sO">
+    <div class="section-header">
+      <span class="section-num">§ O</span>
+      <h2 class="section-title">Deployment &amp; Environment</h2>
+    </div>
+
+    <h3>Activity O1 — Development vs Execution Environment</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Development Environment</th><th>Execution Environment (MUST)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Platform</strong></td><td>Team members' personal laptops — mix of Windows 10/11 and Ubuntu 24.04</td><td>Shared Windows workstation in the MUST finance office</td></tr>
+          <tr><td><strong>Web Server</strong></td><td>XAMPP (Windows) or Apache2 + PHP (Ubuntu) installed locally</td><td>XAMPP installed on the finance office workstation</td></tr>
+          <tr><td><strong>PHP Version</strong></td><td>PHP 8.1 (enforced via .php-version file in repository)</td><td>PHP 8.1 installed as part of XAMPP bundle</td></tr>
+          <tr><td><strong>Database</strong></td><td>SQLite fwas.db — each developer has own local copy seeded with test data</td><td>SQLite fwas.db — production data, backed up by Admin via UC-22</td></tr>
+          <tr><td><strong>Access Method</strong></td><td>http://localhost/fwas/ in developer's browser</td><td>http://localhost/fwas/ in Chrome/Firefox on the finance machine</td></tr>
+          <tr><td><strong>Internet Required</strong></td><td>For GitHub push/pull and Composer install only</td><td>No internet required. System runs fully offline.</td></tr>
+          <tr><td><strong>Deployment Method</strong></td><td>Git pull from GitHub into /htdocs/fwas/</td><td>USB drive copy of /fwas/ folder into XAMPP /htdocs/</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity O2 — Deployment Diagram</h3>
+    <div class="code-block"><pre>MUST Finance Office — Single Workstation
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│   ┌────────────────────────────────────────────────────┐   │
+│   │            Windows PC (Finance Workstation)        │   │
+│   │                                                    │   │
+│   │  ┌─────────────┐    ┌───────────────────────────┐  │   │
+│   │  │ Web Browser │───▶│  Apache HTTP Server       │  │   │
+│   │  │ (Chrome/FF) │    │  (XAMPP, localhost)       │  │   │
+│   │  └─────────────┘    └──────────────┬────────────┘  │   │
+│   │                                    │ PHP 8.1        │   │
+│   │                        ┌───────────▼────────────┐  │   │
+│   │                        │   FWAS Application     │  │   │
+│   │                        │   (Controllers /       │  │   │
+│   │                        │    Models / Views)     │  │   │
+│   │                        └───────────┬────────────┘  │   │
+│   │                                    │ PDO            │   │
+│   │                        ┌───────────▼────────────┐  │   │
+│   │                        │   SQLite (fwas.db)     │  │   │
+│   │                        └────────────────────────┘  │   │
+│   └────────────────────────────────────────────────────┘   │
+│                                                            │
+│  Backup: Admin copies fwas.db to USB drive (UC-22)         │
+│  IFMS:   Finance Officer manually enters exported CSV       │
+│          into IFMS on a separate government terminal        │
+└────────────────────────────────────────────────────────────┘</pre></div>
+  </section>
+
+  <!-- SP -->
+  <section id="sP">
+    <div class="section-header">
+      <span class="section-num">§ P</span>
+      <h2 class="section-title">Open Source Considerations</h2>
+    </div>
+
+    <div class="callout success">
+      <div class="icon">✅</div>
+      <div class="body"><strong>Decision:</strong> Yes — FWAS uses open-source tools and libraries</div>
+    </div>
+
+    <h3>Activity P1 — Open Source Components</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Licence</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PHP 8.1</strong></td><td>PHP Licence 3.01</td><td>Free to use commercially and in institutional deployments. No restriction on use at MUST.</td></tr>
+          <tr><td><strong>Apache HTTP Server</strong></td><td>Apache Licence 2.0</td><td>Permissive licence. Free for any use including institutional deployment.</td></tr>
+          <tr><td><strong>SQLite</strong></td><td>Public Domain</td><td>No licence restrictions whatsoever. Explicitly released to the public domain by its authors.</td></tr>
+          <tr><td><strong>PhpSpreadsheet</strong></td><td>MIT</td><td>Permits use, modification, distribution. Attribution required in the documentation.</td></tr>
+          <tr><td><strong>Bootstrap 5</strong></td><td>MIT</td><td>Free to use. Attribution required. Served from local copy to satisfy offline requirement.</td></tr>
+          <tr><td><strong>XAMPP</strong></td><td>Multiple (Apache, PHP)</td><td>Free for non-commercial and educational use. Appropriate for MUST institutional deployment.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Activity P2 — Licensing Awareness</h3>
+
+    <h4>1. Attribution requirement (MIT Licence)</h4>
+    <p>PhpSpreadsheet and Bootstrap are MIT-licenced, which requires that their copyright notice and licence text be included in the software. The FWAS codebase must include a <code>/LICENCES/</code> folder containing the original licence files for both libraries. Omitting this is a licence violation even in non-commercial use.</p>
+
+    <h4>2. No warranty clause</h4>
+    <p>All licences used disclaim warranties. If PhpSpreadsheet produces a corrupt Excel file, the library authors bear no legal responsibility. FWAS must include its own data validation and testing to catch errors before they reach the Finance Officer.</p>
+
+    <h4>3. Modification and distribution</h4>
+    <p>If FWAS is ever distributed to other institutions beyond MUST, all bundled open-source components must still comply with their licence terms. MIT and Apache 2.0 both permit redistribution with attribution. No component used has a copyleft (GPL-style) licence that would force FWAS's own code to become open source.</p>
+
+    <h4>4. XAMPP in production</h4>
+    <p>XAMPP is designed primarily as a development environment. For long-term production deployment at MUST, the team recommends transitioning to a standalone Apache + PHP installation to avoid bundling unnecessary components (MariaDB, phpMyAdmin) that increase the attack surface on the finance workstation.</p>
+
+    <h4>5. Dependency management</h4>
+    <p>PhpSpreadsheet is installed via Composer. The <code>composer.lock</code> file must be committed to the repository so all team members and the deployment machine use identical library versions. Use <code>composer install --no-dev</code> on deployment to exclude development-only dependencies.</p>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section id="checklist">
+    <div class="section-header">
+      <span class="section-num">✔</span>
+      <h2 class="section-title">Final Project Progress Checklist</h2>
+    </div>
+    <ul class="checklist">
+      <li><span class="check-icon">✓</span>System components identified and documented</li>
+      <li><span class="check-icon">✓</span>Architecture diagrams drawn (context, layered, deployment)</li>
+      <li><span class="check-icon">✓</span>Architectural pattern selected (Layered + MVC) and justified</li>
+      <li><span class="check-icon">✓</span>Design decisions linked to non-functional requirements</li>
+      <li><span class="check-icon">✓</span>4+1 architectural views applied to FWAS</li>
+      <li><span class="check-icon">✓</span>Design problem identified and Observer pattern applied (Section K)</li>
+      <li><span class="check-icon">✓</span>Build vs buy decision made and justified</li>
+      <li><span class="check-icon">✓</span>Full technology stack defined with rationale</li>
+      <li><span class="check-icon">✓</span>Task allocation assigned to all six team members</li>
+      <li><span class="check-icon">✓</span>Reusable components identified, benefits and challenges evaluated</li>
+      <li><span class="check-icon">✓</span>Version control tool selected with branching model and commit convention</li>
+      <li><span class="check-icon">✓</span>Development vs execution environment documented</li>
+      <li><span class="check-icon">✓</span>Deployment diagram produced</li>
+      <li><span class="check-icon">✓</span>Open source components listed with licences and obligations addressed</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>FWAS — Group 9 — Software Engineering — MUST 2026</span>
+    <span>Weeks 5 &amp; 7 Combined Report</span>
+  </footer>
+
+</main>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const total = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrolled / total;
+    document.getElementById('progress').style.transform = `scaleX(${progress})`;
+  });
+
+  // Active nav link
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
